@@ -4,4 +4,3 @@ PyMuPDF
 fuzzywuzzy
 python-Levenshtein
 plotly
-language-tool-python

@@ -4,7 +4,6 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 import uuid
 import plotly.graph_objects as go
-import language_tool_python
 from fuzzywuzzy import fuzz
 
 # ==================== PAGE CONFIG ====================
@@ -21,22 +20,14 @@ def load_model():
     """Load SentenceTransformer model once and reuse"""
     return SentenceTransformer("intfloat/e5-large-v2")
 
-
-@st.cache_resource
-def load_grammar_tool():
-    """Load grammar tool once"""
-    return language_tool_python.LanguageTool('en-US')
-
 # Load models once
 model = load_model()
-grammar_tool = load_grammar_tool()
 
 # ==================== TEXT EXTRACTION & PREPROCESSING ====================
 
 def extract_text_from_pdf(uploaded_file, max_chars=50000):
     """
     Extract text from PDF with size limit
-    ✅ FIX #2: Added max_chars to prevent huge PDFs from freezing app
     """
     try:
         pdf_file = uploaded_file.read()
@@ -45,13 +36,14 @@ def extract_text_from_pdf(uploaded_file, max_chars=50000):
         
         for page in doc:
             text += page.get_text()
+         
             if len(text) > max_chars:
                 st.warning(f"PDF too large. Using first {max_chars} characters.")
                 text = text[:max_chars]
                 break
         
         doc.close()
-        # Single regex instead of multiple operations
+     
         text = re.sub(r'\s+', ' ', text).strip()
         
         if not text:
@@ -71,7 +63,6 @@ def preprocess_text(text):
 def extract_skills(resume_text, job_desc, skills_list, threshold=70):
     """
     Match skills efficiently
-    ✅ FIX #3: Early exit if no skills, avoid unnecessary processing
     """
     if not skills_list or not resume_text or not job_desc:
         return [], []
@@ -94,46 +85,26 @@ def extract_skills(resume_text, job_desc, skills_list, threshold=70):
     
     return matched, missing
 
-# ==================== GRAMMAR CHECKING (OPTIMIZED) ====================
-
-def check_grammar(text, max_length=5000):
-    if not text or len(text) == 0:
-        return []
-    
-    text_to_check = text[:max_length]
-    
-    try:
-        matches = grammar_tool.check(text_to_check)
-        # Return top 10 issues only (not 100+)
-        issues = [
-            f"{match.message} (at position {match.offset})" 
-            for match in matches[:10]
-        ]
-        return issues
-    except Exception as e:
-        st.warning(f"Grammar check skipped: {e}")
-        return []
-
-# ==================== FORMATTING CHECKS (OPTIMIZED) ====================
+# ==================== FORMATTING CHECKS ====================
 
 def check_formatting(text):
     """Check formatting with better logic"""
     issues = []
     
-  
+    # Optimize bullet point detection
     bullet_count = text.count("•") + text.count("- ")
     if bullet_count < 3:
         issues.append("Use more bullet points for better readability.")
     elif bullet_count > 50:
         issues.append("Too many bullet points. Consolidate where possible.")
     
- 
+    # Better ALL CAPS detection
     lines = text.splitlines()
     caps_lines = sum(1 for line in lines if line.isupper() and len(line) > 10)
     if caps_lines > 3:
         issues.append(f"Avoid using ALL CAPS excessively ({caps_lines} lines found).")
     
-   
+
     long_lines = [line for line in lines if len(line) > 160]
     if long_lines:
         issues.append(f"{len(long_lines)} lines are too long (>160 chars). Break them up.")
@@ -157,9 +128,8 @@ def calculate_style_score(text):
 def calculate_ats_score(text, job_desc):
     """
     Calculate ATS score
-    ✅ FIX #10: Improved keyword matching
     """
-  
+
     keywords = [
         word.lower() for word in job_desc.split() 
         if len(word) > 4 and word.isalpha()
@@ -184,12 +154,11 @@ def calculate_section_score(text):
     count = sum(1 for sec in sections if sec in text_lower)
     return round((count / len(sections)) * 100)
 
-# ==================== SEMANTIC MATCHING (OPTIMIZED) ====================
+# ==================== SEMANTIC MATCHING ====================
 
 def compare_resume_with_job(resume_text, job_desc, skills_list):
     """
     Compare resume with job description
-    ✅ FIX #11: Better error handling and validation
     """
     if not resume_text or not job_desc:
         return None, [], []
@@ -202,7 +171,7 @@ def compare_resume_with_job(resume_text, job_desc, skills_list):
     jd_clean = job_desc[:2000]
     
     try:
-      
+        # More efficient embedding strategy
         resume_embedding = model.encode(
             "passage: " + resume_clean.lower(),
             convert_to_tensor=True
@@ -289,7 +258,7 @@ def animated_gauge(label, value, color):
 st.title("📄 Resume to Job Description Matcher")
 st.write(
     "Upload your resume (PDF) and paste a job description to analyze compatibility. "
-    "**Performance optimized version - loads 3-5x faster!**"
+    "**Performance optimized - instant results!**"
 )
 
 # Sidebar configuration
@@ -304,15 +273,15 @@ with st.sidebar:
         if s.strip()
     ]
     
-    # ✅ FIX #13: Add skill limit validation
+    # Add skill limit validation
     if len(skills_list) > 20:
         st.warning(f"⚠️ Limited to 20 skills. Using first 20 of {len(skills_list)}.")
         skills_list = skills_list[:20]
     
-    enable_feedback = st.checkbox("Enable Grammar & Formatting Feedback", value=True)
+    enable_formatting_feedback = st.checkbox("Enable Formatting Feedback", value=True)
     
     st.markdown("---")
-    st.caption("💡 Tip: Grammar check works best with well-formatted text")
+    st.caption("💡 Tip: Formatting suggestions based on ATS best practices")
 
 # Main content
 col1, col2 = st.columns([1, 1])
@@ -329,7 +298,7 @@ if uploaded_file and job_desc:
     if not skills_list:
         st.warning("⚠️ Please enter at least one skill in the sidebar to analyze.")
     else:
-        # ✅ FIX #14: Better progress indication
+        # Progress indicators
         progress_bar = st.progress(0)
         status_text = st.empty()
         
@@ -421,32 +390,17 @@ if uploaded_file and job_desc:
                         
                         st.divider()
                         
-                        # Feedback
-                        if enable_feedback:
-                            col1, col2 = st.columns(2)
+                        # Formatting feedback
+                        if enable_formatting_feedback:
+                            st.subheader("🧾 Formatting & Structure")
+                            formatting_issues = check_formatting(resume_text)
                             
-                            with col1:
-                                st.subheader("🛠️ Grammar & Spelling")
-                                with st.spinner("Checking grammar..."):
-                                    grammar_issues = check_grammar(resume_text)
-                                
-                                if grammar_issues:
-                                    st.warning(f"Found {len(grammar_issues)} issues:")
-                                    for issue in grammar_issues:
-                                        st.markdown(f"- {issue}")
-                                else:
-                                    st.success("✅ No grammar issues found!")
-                            
-                            with col2:
-                                st.subheader("🧾 Formatting")
-                                formatting_issues = check_formatting(resume_text)
-                                
-                                if formatting_issues:
-                                    st.warning(f"Found {len(formatting_issues)} suggestions:")
-                                    for issue in formatting_issues:
-                                        st.markdown(f"- {issue}")
-                                else:
-                                    st.success("✅ Formatting looks great!")
+                            if formatting_issues:
+                                st.warning(f"Found {len(formatting_issues)} suggestions:")
+                                for issue in formatting_issues:
+                                    st.markdown(f"- {issue}")
+                            else:
+                                st.success("✅ Formatting looks great!")
                         
                         st.divider()
                         st.subheader("💡 Recommendations")
@@ -454,15 +408,22 @@ if uploaded_file and job_desc:
                         ✅ **To improve your match score:**
                         1. Add missing technical skills that match the job description
                         2. Use quantifiable achievements (e.g., "improved performance by 40%")
-                        3. Include relevant keywords from the job posting
+                        3. Include relevant keywords from the job posting naturally
                         4. Ensure all major sections (Education, Experience, Skills) are present
                         5. Keep formatting clean with consistent bullet points
                         
                         ✅ **For ATS optimization:**
                         - Use standard section headers
-                        - Avoid tables and images
-                        - Use simple formatting (bullets, not fancy designs)
-                        - Include relevant keywords naturally
+                        - Avoid tables and images (unless necessary)
+                        - Use simple, professional formatting
+                        - Include relevant keywords naturally throughout
+                        - Maintain consistent date formatting
+                        
+                        ✅ **General Tips:**
+                        - Tailor your resume for each job application
+                        - Keep it to 1-2 pages
+                        - Use power words and action verbs
+                        - Quantify your achievements with metrics
                         """)
                 else:
                     st.error("❌ Could not compute similarity score. Please try again.")

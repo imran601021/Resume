@@ -1,5 +1,5 @@
 ---
-title: Resume Analyzer Pro
+title: Resume Analyzer 
 emoji: 🎯
 colorFrom: blue
 colorTo: green

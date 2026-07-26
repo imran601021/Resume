@@ -125,7 +125,19 @@ def generate_ai_feedback(resume_text, job_desc, scores, details, skills_list):
                 time.sleep(1.5 * (attempt + 1))  # brief backoff before retrying
                 continue
 
-    return None, f"AI agent error: {type(last_error).__name__}: {last_error}"
+    return None, f"AI agent error: {_describe_error(last_error)}"
+
+
+def _describe_error(e):
+    """Dig past SDK wrapper exceptions to show the real underlying cause."""
+    parts = [f"{type(e).__name__}: {e}"]
+    cause = e.__cause__
+    seen = set()
+    while cause is not None and id(cause) not in seen:
+        seen.add(id(cause))
+        parts.append(f"caused by {type(cause).__name__}: {cause}")
+        cause = cause.__cause__
+    return " | ".join(parts)
 
 
 def _parse_json_response(raw):

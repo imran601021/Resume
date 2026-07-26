@@ -40,6 +40,10 @@ def _get_client():
     if not api_key:
         return None
 
+    api_key = api_key.strip()  # guard against trailing newline/whitespace from copy-paste
+    if not api_key:
+        return None
+
     return Groq(api_key=api_key)
 
 

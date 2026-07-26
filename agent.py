@@ -15,6 +15,7 @@ the GROQ_API_KEY environment variable (or in Streamlit secrets).
 
 import json
 import os
+import time
 import urllib.parse
 
 from groq import Groq
@@ -102,22 +103,29 @@ def generate_ai_feedback(resume_text, job_desc, scores, details, skills_list):
 
     prompt = _build_prompt(resume_text, job_desc, scores, details, skills_list)
 
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=1600,
-            reasoning_effort="low",  # this task doesn't need deep reasoning; keeps it fast & within free-tier token limits
-            response_format={"type": "json_object"},
-        )
-        raw = response.choices[0].message.content
-        data = _parse_json_response(raw)
-        if data is None:
-            return None, "AI agent error: model returned a response that wasn't valid JSON."
-        return data, None
-    except Exception as e:
-        return None, f"AI agent error: {e}"
+    last_error = None
+    for attempt in range(3):
+        try:
+            response = client.chat.completions.create(
+                model=MODEL,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.4,
+                max_tokens=1600,
+                reasoning_effort="low",  # this task doesn't need deep reasoning; keeps it fast & within free-tier token limits
+                response_format={"type": "json_object"},
+            )
+            raw = response.choices[0].message.content
+            data = _parse_json_response(raw)
+            if data is None:
+                return None, "AI agent error: model returned a response that wasn't valid JSON."
+            return data, None
+        except Exception as e:
+            last_error = e
+            if attempt < 2:
+                time.sleep(1.5 * (attempt + 1))  # brief backoff before retrying
+                continue
+
+    return None, f"AI agent error: {type(last_error).__name__}: {last_error}"
 
 
 def _parse_json_response(raw):

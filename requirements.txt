@@ -3,3 +3,4 @@ sentence-transformers
 PyMuPDF
 plotly
 numpy
+groq

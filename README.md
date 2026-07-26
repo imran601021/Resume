@@ -2,6 +2,8 @@
 
 An AI-powered resume matcher that scores how well your resume fits a job description — with skill gap analysis, keyword density, experience matching, and formatting feedback.
 
+**New: AI Agent.** On top of the scoring engine, an agent (powered by Groq's free API running the open-weight OpenAI GPT-OSS 120B model) explains *why* your score is what it is, rewrites weak bullet points, and suggests job roles worth searching for based on your resume — with ready-to-click Indeed/LinkedIn/Naukri search links.
+
 🔗 **Live Demo:** [huggingface.co/spaces/CallMeRolex/Resume-Analyzer](https://huggingface.co/spaces/CallMeRolex/Resume-Analyzer)
 
 ---
@@ -47,6 +49,18 @@ Open your browser at **http://localhost:8501**
 
 > **Note:** First launch downloads the `all-mpnet-base-v2` model (~420MB). This only happens once.
 
+### 🧠 Enable the AI Agent (optional, free)
+
+The AI Agent uses [Groq](https://console.groq.com/keys)'s free API to run an open-weight LLM (OpenAI's GPT-OSS 120B). No paid plan needed.
+
+1. Create a free account at [console.groq.com](https://console.groq.com/keys) and generate an API key.
+2. Set it as an environment variable before running the app:
+   ```bash
+   export GROQ_API_KEY="your-key-here"     # Windows: set GROQ_API_KEY=your-key-here
+   ```
+   Or, if deploying on Streamlit Community Cloud / Hugging Face Spaces, add `GROQ_API_KEY` to your app's secrets.
+3. In the sidebar, keep "Enable AI Agent" checked. If no key is set, the rest of the app still works — the AI Agent section just shows a note instead of feedback.
+
 ---
 
 ## 🐳 Run with Docker
@@ -86,6 +100,9 @@ The app generates an overall match score broken down into:
 
 You'll also get a **Recommendations** section at the bottom with specific actions to improve your score.
 
+**Step 5 — Read the AI Agent's feedback**
+If a `GROQ_API_KEY` is configured, the AI Agent section explains *why* you got that score, rewrites a couple of weak bullet points, and suggests 3-5 job roles worth searching for — with direct Indeed/LinkedIn/Naukri search links.
+
 ---
 
 ## 📁 Project Structure
@@ -93,6 +110,7 @@ You'll also get a **Recommendations** section at the bottom with specific action
 ```
 Resume/
 ├── app.py               # Main Streamlit application
+├── agent.py             # AI Agent: gap analysis, tips, job suggestions (Groq + GPT-OSS 120B)
 ├── requirements.txt     # Python dependencies
 ├── Dockerfile           # Docker image definition
 ├── docker-compose.yml   # Local Docker orchestration
@@ -109,6 +127,7 @@ Resume/
 | [sentence-transformers](https://www.sbert.net) | Semantic embeddings (`all-mpnet-base-v2`) |
 | [PyMuPDF](https://pymupdf.readthedocs.io) | PDF text extraction |
 | [Plotly](https://plotly.com) | Score gauge charts |
+| [Groq](https://groq.com) + GPT-OSS 120B | AI Agent — gap analysis, bullet rewrites, job suggestions (free, open-source model) |
 
 ---
 

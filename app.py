@@ -5,6 +5,8 @@ from sentence_transformers import SentenceTransformer, util
 import plotly.graph_objects as go
 import numpy as np
 
+import agent  # AI agent module (Groq + open-source LLM)
+
 st.set_page_config(page_title="Resume Analyzer Pro", layout="wide", initial_sidebar_state="expanded")
 
 # ── Model ──────────────────────────────────────────────────────────
@@ -231,6 +233,11 @@ with st.sidebar:
     st.markdown("---")
     st.caption("🤖 all-mpnet-base-v2 (80–85% accuracy)")
     st.caption("📊 Semantic analysis enabled")
+    st.markdown("---")
+    st.header("🧠 AI Agent")
+    use_ai_agent = st.checkbox("Enable AI Agent (free, open-source LLM)", value=True)
+    job_location = st.text_input("Preferred job location", value="Chennai, Tamil Nadu")
+    st.caption("Powered by Groq (GPT-OSS 120B) — free tier, no cost.")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -359,6 +366,46 @@ if uploaded_file and job_desc:
                         for r in recs: st.markdown(f"• {r}")
                     else:
                         st.success("✅ Your resume looks great for this position!")
+
+                # ── AI Agent: gap analysis, tips, rewrites, job suggestions ──
+                if use_ai_agent:
+                    st.divider()
+                    st.subheader("🧠 AI Agent — Deeper Feedback & Job Suggestions")
+                    with st.spinner("Agent is reviewing your resume..."):
+                        feedback, err = agent.generate_ai_feedback(
+                            resume_text, job_desc, scores, details, skills_list
+                        )
+
+                    if err:
+                        st.info(f"ℹ️ {err}")
+                    elif feedback:
+                        st.markdown("**🔎 Why you're lagging:**")
+                        st.write(feedback.get("gap_summary", ""))
+
+                        tips = feedback.get("improvement_tips", [])
+                        if tips:
+                            st.markdown("**💡 Tips to improve:**")
+                            for t in tips:
+                                st.markdown(f"- {t}")
+
+                        rewrites = feedback.get("bullet_rewrites", [])
+                        if rewrites:
+                            st.markdown("**✍️ Suggested bullet rewrites:**")
+                            for r in rewrites:
+                                st.markdown(f"- ~~{r.get('original', '')}~~")
+                                st.markdown(f"  → **{r.get('improved', '')}**")
+
+                        roles = feedback.get("suggested_roles", [])
+                        if roles:
+                            st.markdown("**💼 Job roles worth exploring, based on your resume:**")
+                            job_links = agent.build_job_search_links(roles, location=job_location)
+                            for jl in job_links:
+                                st.markdown(
+                                    f"- **{jl['role']}** — "
+                                    f"[Indeed]({jl['indeed']}) · "
+                                    f"[LinkedIn]({jl['linkedin']}) · "
+                                    f"[Naukri]({jl['naukri']})"
+                                )
 
         except Exception as e:
             st.error(f"Error: {e}")

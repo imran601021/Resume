@@ -1,4 +1,13 @@
-
+---
+title: Resume Analyzer
+emoji: 🎯
+colorFrom: blue
+colorTo: green
+sdk: streamlit
+sdk_version: 1.38.0
+app_file: app.py
+pinned: false
+---
 # 🎯 Resume Analyzer
 
 An AI-powered resume matcher that scores how well your resume fits a job description — with skill gap analysis, keyword density, experience matching, and formatting feedback.

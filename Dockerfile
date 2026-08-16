@@ -7,12 +7,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=100 torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir --default-timeout=100 -r requirements.txt
 
 # Pre-download model during build so first startup is instant
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('sentence-transformers/all-mpnet-base-v2')"
 
-COPY app.py .
+COPY app.py agent.py .
 
 EXPOSE 8501
 

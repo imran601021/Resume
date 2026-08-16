@@ -213,6 +213,27 @@ def animated_gauge(label, value, color):
     fig.update_layout(height=300, margin=dict(l=10, r=10, t=50, b=10))
     st.plotly_chart(fig, use_container_width=True)
 
+# ── Score interpretation ──────────────────────────────────────────
+def score_verdict(value):
+    if value >= 85:
+        return "Excellent match — you're well aligned for this role", "success"
+    elif value >= 70:
+        return "Good match — minor tailoring recommended", "info"
+    elif value >= 50:
+        return "Moderate match — some real gaps to address", "warning"
+    else:
+        return "Weak match — significant rework needed", "error"
+
+def metric_caption(value):
+    if value >= 85:
+        return "Excellent"
+    elif value >= 70:
+        return "Good"
+    elif value >= 50:
+        return "Needs work"
+    else:
+        return "Weak"
+
 # ── UI ─────────────────────────────────────────────────────────────
 st.title("Resume Analyzer PRO")
 st.write("**Advanced AI-powered resume matching** with semantic analysis, skill extraction, and detailed recommendations.")
@@ -224,6 +245,11 @@ with st.sidebar:
     if len(skills_list) > 20:
         st.warning("Limited to 20 skills. Using first 20.")
         skills_list = skills_list[:20]
+
+    if skills_list:
+        st.caption("Skills detected:")
+        st.markdown(" ".join(f"`{s}`" for s in skills_list))
+
     show_detailed = st.checkbox("Show Detailed Analysis", value=True)
     st.caption("all-mpnet-base-v2 (80–85% accuracy) · Semantic analysis enabled")
 
@@ -237,11 +263,15 @@ col1, col2 = st.columns(2)
 with col1:
     uploaded_file = st.file_uploader("Upload Resume PDF", type=["pdf"])
 with col2:
-    job_desc = st.text_area("Paste Job Description", height=150)
+    job_desc = st.text_area(
+        "Paste Job Description",
+        height=150,
+        placeholder="Paste the full job posting here, including requirements and responsibilities..."
+    )
 
 if uploaded_file and job_desc:
     if not skills_list:
-        st.warning("Enter at least one skill to analyze.")
+        st.warning("Enter at least one skill in the sidebar to analyze.")
     else:
         progress_bar = st.progress(0)
         status_text  = st.empty()
@@ -251,7 +281,7 @@ if uploaded_file and job_desc:
             resume_text = extract_text_from_pdf(uploaded_file)
 
             if resume_text:
-                status_text.text("Analysing with AI...")
+                status_text.text("Running semantic analysis — comparing meaning, not just keywords...")
                 progress_bar.progress(60)
                 scores, details = calculate_advanced_scores(resume_text, job_desc, skills_list)
                 progress_bar.progress(100)
@@ -259,11 +289,21 @@ if uploaded_file and job_desc:
                 progress_bar.empty()
                 status_text.empty()
 
+                # ── Always-visible gauges with verdicts ───────────
                 st.divider()
                 c1, c2, c3 = st.columns(3)
-                with c1: animated_gauge("Overall Match", scores['overall'], "#4CAF50")
-                with c2: animated_gauge("Skill Match",   scores['skills'],  "#2196F3")
-                with c3: animated_gauge("Content Match", scores['content'], "#FF9800")
+                with c1:
+                    animated_gauge("Overall Match", scores['overall'], "#4CAF50")
+                    msg, kind = score_verdict(scores['overall'])
+                    getattr(st, kind)(msg)
+                with c2:
+                    animated_gauge("Skill Match", scores['skills'], "#2196F3")
+                    msg, kind = score_verdict(scores['skills'])
+                    getattr(st, kind)(msg)
+                with c3:
+                    animated_gauge("Content Match", scores['content'], "#FF9800")
+                    msg, kind = score_verdict(scores['content'])
+                    getattr(st, kind)(msg)
 
                 st.divider()
 
@@ -274,11 +314,11 @@ if uploaded_file and job_desc:
                 with tab1:
                     st.subheader("Score Breakdown")
                     c1, c2, c3, c4, c5 = st.columns(5)
-                    c1.metric("Semantic",    f"{scores['content']}%")
-                    c2.metric("Skills",      f"{scores['skills']}%")
-                    c3.metric("Keywords",    f"{scores['keywords']:.0f}%")
-                    c4.metric("Experience",  f"{scores['experience']}%")
-                    c5.metric("Formatting",  f"{scores['formatting']}%")
+                    c1.metric("Semantic",   f"{scores['content']}%",   metric_caption(scores['content']))
+                    c2.metric("Skills",     f"{scores['skills']}%",    metric_caption(scores['skills']))
+                    c3.metric("Keywords",   f"{scores['keywords']:.0f}%", metric_caption(scores['keywords']))
+                    c4.metric("Experience", f"{scores['experience']}%", metric_caption(scores['experience']))
+                    c5.metric("Formatting", f"{scores['formatting']}%", metric_caption(scores['formatting']))
 
                     st.divider()
                     st.subheader("Quick Summary")
@@ -385,6 +425,7 @@ if uploaded_file and job_desc:
                 if use_ai_agent:
                     st.divider()
                     st.subheader("AI Agent — Deeper Feedback & Job Suggestions")
+                    st.caption("AI-generated analysis — treat as a second opinion alongside the scores above.")
                     with st.spinner("Agent is reviewing your resume..."):
                         feedback, err = agent.generate_ai_feedback(
                             resume_text, job_desc, scores, details, skills_list
@@ -422,7 +463,9 @@ if uploaded_file and job_desc:
                                 )
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error("Something went wrong while analyzing your resume. If your PDF is scanned or image-based, try a text-based PDF instead.")
+            with st.expander("Technical details"):
+                st.code(str(e))
             progress_bar.empty()
             status_text.empty()
 else:

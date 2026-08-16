@@ -44,11 +44,8 @@ def extract_skills_advanced(resume_text, job_desc, skills_list, threshold=0.6):
 
     matched, missing, partial_matches = [], [], []
 
-    # Encode resume & job desc ONCE outside loop
     resume_embedding = model.encode(resume_text, convert_to_tensor=True)
     job_embedding    = model.encode(job_desc,    convert_to_tensor=True)
-
-    # FIX: encode ALL skills in a single batched call
     skill_embeddings = model.encode(skills_list, convert_to_tensor=True)
 
     for i, skill in enumerate(skills_list):
@@ -85,7 +82,7 @@ def check_experience_match(resume_text, job_desc):
         required = int(job_match.group(1))
         match    = resume_years >= required
         return {
-            'status':        "✅ MATCH" if match else "⚠️ BELOW REQUIREMENT",
+            'status':        "MATCH" if match else "BELOW REQUIREMENT",
             'resume_years':  resume_years,
             'required_years': required,
             'match':         match
@@ -97,10 +94,8 @@ def extract_job_title(job_desc):
     lines = [l.strip() for l in job_desc.strip().split('\n') if l.strip()]
     if not lines:
         return "Job Title Not Found"
-    # First non-empty line is most likely the title
     if lines[0]:
         return lines[0]
-    # Fallback: scan for a line with a common role keyword
     role_kw = ['engineer', 'developer', 'manager', 'analyst', 'designer',
                'scientist', 'lead', 'architect', 'director', 'consultant']
     for line in lines:
@@ -109,7 +104,7 @@ def extract_job_title(job_desc):
     return "Job Title Not Found"
 
 def analyze_job_title_match(resume_text, job_desc):
-    title = extract_job_title(job_desc)          # always a str now
+    title = extract_job_title(job_desc)
     te = model.encode(title,       convert_to_tensor=True)
     re_ = model.encode(resume_text, convert_to_tensor=True)
     score = util.cos_sim(te, re_).item()
@@ -219,22 +214,21 @@ def animated_gauge(label, value, color):
     st.plotly_chart(fig, use_container_width=True)
 
 # ── UI ─────────────────────────────────────────────────────────────
-st.title("🎯 Resume Analyzer PRO")
+st.title("Resume Analyzer PRO")
 st.write("**Advanced AI-powered resume matching** with semantic analysis, skill extraction, and detailed recommendations.")
 
 with st.sidebar:
-    st.header("⚙️ Configuration")
+    st.header("Configuration")
     user_skill_input = st.text_input("Enter your skills (comma-separated)", placeholder="Python, Flask, Docker, AWS")
     skills_list = [s.strip().lower() for s in user_skill_input.split(",") if s.strip()]
     if len(skills_list) > 20:
         st.warning("Limited to 20 skills. Using first 20.")
         skills_list = skills_list[:20]
     show_detailed = st.checkbox("Show Detailed Analysis", value=True)
+    st.caption("all-mpnet-base-v2 (80–85% accuracy) · Semantic analysis enabled")
+
     st.markdown("---")
-    st.caption("🤖 all-mpnet-base-v2 (80–85% accuracy)")
-    st.caption("📊 Semantic analysis enabled")
-    st.markdown("---")
-    st.header("🧠 AI Agent")
+    st.header("AI Agent")
     use_ai_agent = st.checkbox("Enable AI Agent (free, open-source LLM)", value=True)
     job_location = st.text_input("Preferred job location", value="Chennai, Tamil Nadu")
     st.caption("Powered by Groq (GPT-OSS 120B) — free tier, no cost.")
@@ -247,157 +241,177 @@ with col2:
 
 if uploaded_file and job_desc:
     if not skills_list:
-        st.warning("⚠️ Enter at least one skill to analyze.")
+        st.warning("Enter at least one skill to analyze.")
     else:
         progress_bar = st.progress(0)
         status_text  = st.empty()
         try:
-            status_text.text("📄 Extracting resume...")
+            status_text.text("Extracting resume...")
             progress_bar.progress(20)
             resume_text = extract_text_from_pdf(uploaded_file)
 
             if resume_text:
-                status_text.text("🔍 Analysing with AI...")
+                status_text.text("Analysing with AI...")
                 progress_bar.progress(60)
                 scores, details = calculate_advanced_scores(resume_text, job_desc, skills_list)
                 progress_bar.progress(100)
-                status_text.text("✅ Analysis complete!")
+                status_text.text("Analysis complete!")
                 progress_bar.empty()
                 status_text.empty()
 
                 st.divider()
                 c1, c2, c3 = st.columns(3)
-                with c1: animated_gauge("📊 Overall Match", scores['overall'], "#4CAF50")
-                with c2: animated_gauge("🎯 Skill Match",   scores['skills'],  "#2196F3")
-                with c3: animated_gauge("🧠 Content Match", scores['content'], "#FF9800")
-
-                st.subheader("📈 Score Breakdown")
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("Semantic",    f"{scores['content']}%")
-                c2.metric("Skills",      f"{scores['skills']}%")
-                c3.metric("Keywords",    f"{scores['keywords']:.0f}%")
-                c4.metric("Experience",  f"{scores['experience']}%")
-                c5.metric("Formatting",  f"{scores['formatting']}%")
+                with c1: animated_gauge("Overall Match", scores['overall'], "#4CAF50")
+                with c2: animated_gauge("Skill Match",   scores['skills'],  "#2196F3")
+                with c3: animated_gauge("Content Match", scores['content'], "#FF9800")
 
                 st.divider()
-                st.subheader("🎯 Quick Summary")
-                c1, c2, c3 = st.columns(3)
-                with c1: st.info(f"**✅ Matched Skills**\n{len(details['matched'])}/{len(skills_list)}")
-                with c2: st.warning(f"**⚠️ Missing Skills**\n{len(details['missing'])}/{len(skills_list)}")
-                with c3:
-                    if details['experience']:
-                        em = "✅" if details['experience']['match'] else "⚠️"
-                        st.info(f"**{em} Experience**\n{details['experience']['resume_years']}+ years")
-                    else:
-                        st.info("**❓ Experience**\nNot found")
 
-                if show_detailed:
+                tab1, tab2, tab3, tab4, tab5 = st.tabs(
+                    ["Overview", "Skills Detail", "Keywords", "Experience & Title", "Formatting & Tips"]
+                )
+
+                with tab1:
+                    st.subheader("Score Breakdown")
+                    c1, c2, c3, c4, c5 = st.columns(5)
+                    c1.metric("Semantic",    f"{scores['content']}%")
+                    c2.metric("Skills",      f"{scores['skills']}%")
+                    c3.metric("Keywords",    f"{scores['keywords']:.0f}%")
+                    c4.metric("Experience",  f"{scores['experience']}%")
+                    c5.metric("Formatting",  f"{scores['formatting']}%")
+
                     st.divider()
-                    st.subheader("📝 Detailed Analysis")
+                    st.subheader("Quick Summary")
                     c1, c2, c3 = st.columns(3)
                     with c1:
-                        st.markdown("**✅ Matched Skills:**")
-                        for skill, sc in details['matched'][:5]:
-                            st.markdown(f"- {skill} ({sc*100:.0f}%)")
-                        if not details['matched']: st.info("None matched")
+                        st.info(f"**Matched Skills**\n{len(details['matched'])}/{len(skills_list)}")
                     with c2:
-                        st.markdown("**❌ Missing Skills:**")
-                        for skill, _ in details['missing'][:5]:
-                            st.markdown(f"- {skill}")
-                        if not details['missing']: st.success("All matched!")
+                        st.warning(f"**Missing Skills**\n{len(details['missing'])}/{len(skills_list)}")
                     with c3:
-                        st.markdown("**⚠️ Partial Matches:**")
-                        for skill, sc in details['partial'][:5]:
-                            st.markdown(f"- {skill} ({sc*100:.0f}%)")
-                        if not details['partial']: st.info("None")
+                        if details['experience']:
+                            label = "Experience" if details['experience']['match'] else "Experience (below req.)"
+                            st.info(f"**{label}**\n{details['experience']['resume_years']}+ years")
+                        else:
+                            st.info("**Experience**\nNot found")
 
-                    st.divider()
-                    st.markdown("**🔍 Keyword Analysis:**")
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        st.markdown(f"**Found: {details['keywords']['found']}/{details['keywords']['total']}**")
-                        st.caption(f"Density: {details['keywords']['density']:.1f}%")
-                        for kw in details['keywords']['found_keywords'][:8]:
-                            st.markdown(f"✓ {kw}")
-                    with c2:
-                        st.markdown(f"**Missing: {len(details['keywords']['missing_keywords'])}**")
-                        for kw in details['keywords']['missing_keywords'][:8]:
-                            st.markdown(f"✗ {kw}")
+                with tab2:
+                    if show_detailed:
+                        c1, c2, c3 = st.columns(3)
+                        with c1:
+                            st.markdown("**Matched Skills:**")
+                            for skill, sc in details['matched'][:5]:
+                                st.markdown(f"- {skill} ({sc*100:.0f}%)")
+                            if not details['matched']:
+                                st.info("None matched")
+                        with c2:
+                            st.markdown("**Missing Skills:**")
+                            for skill, _ in details['missing'][:5]:
+                                st.markdown(f"- {skill}")
+                            if not details['missing']:
+                                st.success("All matched!")
+                        with c3:
+                            st.markdown("**Partial Matches:**")
+                            for skill, sc in details['partial'][:5]:
+                                st.markdown(f"- {skill} ({sc*100:.0f}%)")
+                            if not details['partial']:
+                                st.info("None")
+                    else:
+                        st.caption("Enable 'Show Detailed Analysis' in the sidebar to see this section.")
 
-                    st.divider()
-                    st.markdown("**💼 Job Title Match:**")
-                    c1, c2 = st.columns(2)
-                    c1.write(f"Position: **{details['title_match']['job_title']}**")
-                    c2.write(f"Match: **{details['title_match']['match_percentage']}%**")
+                with tab3:
+                    if show_detailed:
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            st.markdown(f"**Found: {details['keywords']['found']}/{details['keywords']['total']}**")
+                            st.caption(f"Density: {details['keywords']['density']:.1f}%")
+                            for kw in details['keywords']['found_keywords'][:8]:
+                                st.markdown(f"✓ {kw}")
+                        with c2:
+                            st.markdown(f"**Missing: {len(details['keywords']['missing_keywords'])}**")
+                            for kw in details['keywords']['missing_keywords'][:8]:
+                                st.markdown(f"✗ {kw}")
+                    else:
+                        st.caption("Enable 'Show Detailed Analysis' in the sidebar to see this section.")
 
-                    if details['experience']:
+                with tab4:
+                    if show_detailed:
+                        st.markdown("**Job Title Match:**")
+                        c1, c2 = st.columns(2)
+                        c1.write(f"Position: **{details['title_match']['job_title']}**")
+                        c2.write(f"Match: **{details['title_match']['match_percentage']}%**")
+
+                        if details['experience']:
+                            st.divider()
+                            st.markdown("**Experience Analysis:**")
+                            exp = details['experience']
+                            status_word = "On track" if exp['match'] else "Below requirement"
+                            st.write(f"{status_word}: {exp['resume_years']} vs {exp['required_years']} required years")
+                    else:
+                        st.caption("Enable 'Show Detailed Analysis' in the sidebar to see this section.")
+
+                with tab5:
+                    if show_detailed:
+                        if details['formatting_issues']:
+                            st.markdown("**Formatting Issues:**")
+                            for issue in details['formatting_issues']:
+                                st.warning(issue)
+                        if details['formatting_suggestions']:
+                            st.markdown("**Suggestions:**")
+                            for s in details['formatting_suggestions']:
+                                st.info(s)
+
                         st.divider()
-                        st.markdown("**📅 Experience Analysis:**")
-                        exp = details['experience']
-                        em  = "✅" if exp['match'] else "⚠️"
-                        st.write(f"{em} {exp['status']}: {exp['resume_years']} vs {exp['required_years']} required years")
 
-                    if details['formatting_issues']:
-                        st.divider()
-                        st.markdown("**🧾 Formatting Issues:**")
-                        for issue in details['formatting_issues']:
-                            st.warning(issue)
-                    if details['formatting_suggestions']:
-                        st.markdown("**💡 Suggestions:**")
-                        for s in details['formatting_suggestions']:
-                            st.info(s)
-
-                    st.divider()
-                    st.subheader("🎯 Recommendations")
+                    st.subheader("Recommendations")
                     recs = []
                     if scores['overall'] < 70:
-                        recs.append("🔴 **Overall match is low** — Rewrite sections to better align with the JD")
+                        recs.append("**Overall match is low** — Rewrite sections to better align with the JD")
                     if details['missing']:
-                        recs.append(f"🟡 **Add missing skills** — {len(details['missing'])} required skills not found")
+                        recs.append(f"**Add missing skills** — {len(details['missing'])} required skills not found")
                     if scores['content'] < 70:
-                        recs.append("📝 **Improve content** — Use more job description keywords naturally")
+                        recs.append("**Improve content** — Use more job description keywords naturally")
                     if scores['keywords'] < 60:
-                        recs.append("🔍 **Increase keyword density** — Add specific technical terms")
+                        recs.append("**Increase keyword density** — Add specific technical terms")
                     if details['experience'] and not details['experience']['match']:
-                        recs.append(f"⏳ **Experience gap** — You have {details['experience']['resume_years']} yrs; role needs {details['experience']['required_years']}")
+                        recs.append(f"**Experience gap** — You have {details['experience']['resume_years']} yrs; role needs {details['experience']['required_years']}")
                     if scores['formatting'] < 70:
-                        recs.append("✨ **Improve formatting** — Better structure helps ATS scanning")
+                        recs.append("**Improve formatting** — Better structure helps ATS scanning")
                     if recs:
-                        for r in recs: st.markdown(f"• {r}")
+                        for r in recs:
+                            st.markdown(f"• {r}")
                     else:
-                        st.success("✅ Your resume looks great for this position!")
+                        st.success("Your resume looks great for this position!")
 
-                # ── AI Agent: gap analysis, tips, rewrites, job suggestions ──
                 if use_ai_agent:
                     st.divider()
-                    st.subheader("🧠 AI Agent — Deeper Feedback & Job Suggestions")
+                    st.subheader("AI Agent — Deeper Feedback & Job Suggestions")
                     with st.spinner("Agent is reviewing your resume..."):
                         feedback, err = agent.generate_ai_feedback(
                             resume_text, job_desc, scores, details, skills_list
                         )
 
                     if err:
-                        st.info(f"ℹ️ {err}")
+                        st.info(err)
                     elif feedback:
-                        st.markdown("**🔎 Why you're lagging:**")
+                        st.markdown("**Why you're lagging:**")
                         st.write(feedback.get("gap_summary", ""))
 
                         tips = feedback.get("improvement_tips", [])
                         if tips:
-                            st.markdown("**💡 Tips to improve:**")
+                            st.markdown("**Tips to improve:**")
                             for t in tips:
                                 st.markdown(f"- {t}")
 
                         rewrites = feedback.get("bullet_rewrites", [])
                         if rewrites:
-                            st.markdown("**✍️ Suggested bullet rewrites:**")
+                            st.markdown("**Suggested bullet rewrites:**")
                             for r in rewrites:
                                 st.markdown(f"- ~~{r.get('original', '')}~~")
                                 st.markdown(f"  → **{r.get('improved', '')}**")
 
                         roles = feedback.get("suggested_roles", [])
                         if roles:
-                            st.markdown("**💼 Job roles worth exploring, based on your resume:**")
+                            st.markdown("**Job roles worth exploring, based on your resume:**")
                             job_links = agent.build_job_search_links(roles, location=job_location)
                             for jl in job_links:
                                 st.markdown(
@@ -412,7 +426,7 @@ if uploaded_file and job_desc:
             progress_bar.empty()
             status_text.empty()
 else:
-    st.info("👈 **To get started:**\n\n1. Enter your skills in the sidebar\n2. Upload your resume (PDF)\n3. Paste the job description\n4. View your analysis!")
+    st.info("**To get started:**\n\n1. Enter your skills in the sidebar\n2. Upload your resume (PDF)\n3. Paste the job description\n4. View your analysis!")
 
 st.divider()
-st.caption("⚡ **PRO Version** | 🤖 Advanced AI | 📊 Semantic Matching | 💼 Career Intelligence")
+st.caption("Advanced AI | Semantic Matching | Career Intelligence")

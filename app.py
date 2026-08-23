@@ -12,7 +12,7 @@ st.set_page_config(page_title="Resume Analyzer Pro", layout="wide", initial_side
 # ── Model ──────────────────────────────────────────────────────────
 @st.cache_resource
 def load_model():
-    return SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    return SentenceTransformer("BAAI/bge-base-en-v1.5")
 
 model = load_model()
 
@@ -251,7 +251,7 @@ with st.sidebar:
         st.markdown(" ".join(f"`{s}`" for s in skills_list))
 
     show_detailed = st.checkbox("Show Detailed Analysis", value=True)
-    st.caption("all-MiniLM-L6-v2 (65–70% accuracy, optimized for low memory) · Semantic analysis enabled")
+    st.caption("bge-base-en-v1.5 (strong accuracy, balanced memory) · Semantic analysis enabled")
 
     st.markdown("---")
     st.header("AI Agent")

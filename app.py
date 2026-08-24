@@ -38,7 +38,7 @@ def extract_text_from_pdf(uploaded_file, max_chars=50000):
         return ""
 
 # ── Skill matching──────────────────────────
-def extract_skills_advanced(resume_text, job_desc, skills_list, threshold=0.6):
+def extract_skills_advanced(resume_text, job_desc, skills_list, threshold=0.55):
     if not skills_list or not resume_text or not job_desc:
         return [], [], []
 
@@ -57,7 +57,7 @@ def extract_skills_advanced(resume_text, job_desc, skills_list, threshold=0.6):
             matched.append((skill, round(resume_score, 2)))
         elif job_score > (threshold + 0.05) and resume_score < threshold:
             missing.append((skill, round(job_score, 2)))
-        elif resume_score > 0.45:
+        elif resume_score > 0.40:
             partial_matches.append((skill, round(resume_score, 2)))
 
     return matched, missing, partial_matches

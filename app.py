@@ -4,10 +4,12 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer, util
 import plotly.graph_objects as go
 import numpy as np
+from ui import apply_custom_styles
 
 import agent  # AI agent module (Groq + open-source LLM)
 
-st.set_page_config(page_title="Resume Analyzer Pro", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Resume Analyzer", layout="wide", initial_sidebar_state="expanded")
+apply_custom_styles()
 
 # ── Model ──────────────────────────────────────────────────────────
 @st.cache_resource

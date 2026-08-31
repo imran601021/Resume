@@ -1,6 +1,6 @@
-streamlit
+flask
+gunicorn
 sentence-transformers
 PyMuPDF
-plotly
 numpy
 groq

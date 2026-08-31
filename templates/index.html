@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resume Analyzer PRO</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="app-container">
+    <aside class="sidebar">
+        <h2>Configuration</h2>
+        <label for="skills">Enter your skills (comma-separated)</label>
+        <input type="text" id="skills" placeholder="Python, Flask, Docker, AWS">
+        <div id="skills-chips" class="chips"></div>
+
+        <label class="checkbox-label">
+            <input type="checkbox" id="show-detailed" checked>
+            Show Detailed Analysis
+        </label>
+        <p class="caption">bge-base-en-v1.5 (strong accuracy) · Semantic analysis enabled</p>
+
+        <hr>
+        <h2>AI Agent</h2>
+        <label class="checkbox-label">
+            <input type="checkbox" id="use-ai-agent" checked>
+            Enable AI Agent (free, open-source LLM)
+        </label>
+        <label for="job-location">Preferred job location</label>
+        <input type="text" id="job-location" value="Chennai, Tamil Nadu">
+        <p class="caption">Powered by Groq (GPT-OSS 120B) — free tier, no cost.</p>
+    </aside>
+
+    <main class="main-content">
+        <h1>Resume Analyzer PRO</h1>
+        <p class="subtitle"><strong>Advanced AI-powered resume matching</strong> with semantic analysis, skill extraction, and detailed recommendations.</p>
+
+        <div class="input-row">
+            <div class="card">
+                <label>Upload Resume PDF</label>
+                <input type="file" id="resume-file" accept=".pdf">
+            </div>
+            <div class="card">
+                <label>Paste Job Description</label>
+                <textarea id="job-desc" rows="6" placeholder="Paste the full job posting here, including requirements and responsibilities..."></textarea>
+            </div>
+        </div>
+
+        <button id="analyze-btn" class="primary-btn">Analyze Resume</button>
+
+        <div id="status" class="status hidden"></div>
+
+        <div id="results" class="hidden">
+            <div class="gauges-row" id="gauges-row"></div>
+
+            <div class="tabs">
+                <div class="tab-list">
+                    <button class="tab-btn active" data-tab="overview">Overview</button>
+                    <button class="tab-btn" data-tab="skills">Skills Detail</button>
+                    <button class="tab-btn" data-tab="keywords">Keywords</button>
+                    <button class="tab-btn" data-tab="experience">Experience & Title</button>
+                    <button class="tab-btn" data-tab="formatting">Formatting & Tips</button>
+                </div>
+
+                <div class="tab-panel active" id="tab-overview"></div>
+                <div class="tab-panel" id="tab-skills"></div>
+                <div class="tab-panel" id="tab-keywords"></div>
+                <div class="tab-panel" id="tab-experience"></div>
+                <div class="tab-panel" id="tab-formatting"></div>
+            </div>
+
+            <div id="ai-agent-section"></div>
+        </div>
+
+        <div id="empty-state" class="empty-state">
+            <strong>To get started:</strong>
+            <ol>
+                <li>Enter your skills in the sidebar</li>
+                <li>Upload your resume (PDF)</li>
+                <li>Paste the job description</li>
+                <li>Click Analyze</li>
+            </ol>
+        </div>
+
+        <p class="footer">Open-Source  | Advanced AI | Semantic Matching | Career Intelligence</p>
+    </main>
+</div>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

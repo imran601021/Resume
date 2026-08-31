@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
 RUN pip install --no-cache-dir uv
 
 COPY requirements.txt .
+
+RUN uv pip install --system --no-cache torch --index-url https://download.pytorch.org/whl/cpu
+
 RUN uv pip install --system --no-cache -r requirements.txt
 
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('BAAI/bge-base-en-v1.5')"
@@ -19,3 +22,4 @@ COPY static/ static/
 EXPOSE 8501
 HEALTHCHECK CMD curl --fail http://localhost:8501/health
 CMD ["gunicorn", "--bind", "0.0.0.0:8501", "--timeout", "120", "--workers", "1", "app:app"]
+
